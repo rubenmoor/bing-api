@@ -1,18 +1,22 @@
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE LambdaCase #-}
 
 module Network.Bing.Types where
 
-import           Data.ByteString        (ByteString)
-import qualified Data.ByteString.Base64 as Base64
-import           Data.Default           (Default, def)
-import           Data.Monoid            ((<>))
-import           TextShow               (TextShow, showb)
+import           Control.Lens          ((.~))
+import           Data.ByteString       (ByteString)
+import qualified Data.ByteString.Char8 as Char8
+import           Data.Default          (Default, def)
+import           Data.Monoid           ((<>))
+import qualified Data.Text             as Text
+import           Network.Wreq          (param)
+import qualified Network.Wreq          as Wreq
+import           TextShow              (TextShow, showb, showt)
 
 newtype AccountKey = AccountKey { unAccountKey :: ByteString }
 
-makeAccountKey :: ByteString -> AccountKey
-makeAccountKey str = AccountKey . Base64.encode $ str <> ":" <> str
+instance Read AccountKey where
+  readsPrec _ input = [(AccountKey . Char8.pack $ input, "")]
 
 data Options = Options
   { optsKey         :: AccountKey
@@ -35,6 +39,7 @@ instance Default Options where
 data Format
  = JSON
  | XML
+ deriving (Read, Show)
 
 instance TextShow Format where
   showb JSON = "json"
@@ -48,15 +53,21 @@ data Service
   | News
   | SpellingSuggestion
   | RelatedSearch
-  | Composite [CompositeServices]
+  | Composite [Service]
+  deriving (Read, Show)
 
-data CompositeServices
-  = CompWeb
-  | CompImage
-  | CompVideo
-  | CompNews
-  | CompSpell
-  | CompRelatedSearch
+instance TextShow Service where
+  showb Web                = "Web"
+  showb Image              = "Image"
+  showb Video              = "Video"
+  showb News               = "News"
+  showb SpellingSuggestion = "Spell"
+  showb RelatedSearch      = "RelatedSearch"
+  showb _                  = error "only Web, Image, Video, News, Spell, and RelatedSearch allowed in composite search"
+
+getCompositeParam :: [Service] -> (Wreq.Options -> Wreq.Options)
+getCompositeParam services = param "Sources" .~ [strs]
+  where strs = Text.intercalate "+" $ map showt services
 
 getUrl :: Service -> String
 getUrl = \case
@@ -72,6 +83,6 @@ getUrl = \case
     baseUrl = "https://api.datamarket.azure.com/Bing/"
     searchStr = "Search/"
 
-getHeaders :: Service -> String
-getHeaders (Composite services) = undefined
+getHeaders :: Service -> [Wreq.Options -> Wreq.Options]
+getHeaders (Composite services) = [getCompositeParam services]
 getHeaders _ = []
