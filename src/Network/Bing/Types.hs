@@ -8,6 +8,7 @@ import           Data.ByteString       (ByteString)
 import qualified Data.ByteString.Char8 as Char8
 import           Data.Default          (Default, def)
 import           Data.Monoid           ((<>))
+import           Data.Text             (Text)
 import qualified Data.Text             as Text
 import           Network.Wreq          (param)
 import qualified Network.Wreq          as Wreq
@@ -25,15 +26,17 @@ data Options = Options
   , optsTop         :: Int
   , optsSkip        :: Int
   , optsCompression :: Bool
+  , optsQueryParams :: [(Text, Text)]
   }
 
 instance Default Options where
-  def = Options { optsKey     = AccountKey ""
-                , optsFormat  = JSON
-                , optsService = WebOnly
-                , optsTop     = 10
-                , optsSkip    = 0
+  def = Options { optsKey         = AccountKey ""
+                , optsFormat      = JSON
+                , optsService     = WebOnly
+                , optsTop         = 10
+                , optsSkip        = 0
                 , optsCompression = False
+                , optsQueryParams = []
                 }
 
 data Format
@@ -65,7 +68,7 @@ instance TextShow Service where
   showb RelatedSearch      = "RelatedSearch"
   showb _                  = error "only Web, Image, Video, News, Spell, and RelatedSearch allowed in composite search"
 
-getCompositeParam :: [Service] -> (Wreq.Options -> Wreq.Options)
+getCompositeParam :: [Service] -> Wreq.Options -> Wreq.Options
 getCompositeParam services = param "Sources" .~ [strs]
   where strs = Text.intercalate "+" $ map showt services
 

@@ -60,3 +60,9 @@ options = Options
                  <> showDefault
                  <> help     "use gzip to compress web traffic"
                  )
+  <*> option auto ( long     "query-parameters"
+                 <> short    'q'
+                 <> metavar  "QUERY"
+                 <> value    []
+                 <> showDefault
+                 <> help     "additional query parameters, e.g. ODATA, like this: -q '[(\"foo\", \"bar\")]'")

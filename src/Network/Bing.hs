@@ -6,28 +6,27 @@ module Network.Bing
     , module Network.Bing.Types
     ) where
 
-import           Control.Lens         ((&), (.~), (?~), (^.), view)
-import           Data.Aeson.Lens      (key, nth, _String)
-import           Data.ByteString.Lazy (ByteString)
-import           Data.Foldable        (foldr')
-import           Data.Monoid          ((<>))
-import           Data.Text            (Text)
-import qualified Data.Text.Lazy.Encoding   as Text
-import qualified Data.Text.Lazy as Text
-import           TextShow             (showt)
+import           Control.Lens            (view, (.~), (?~))
+import           Data.ByteString.Lazy    (ByteString)
+import           Data.Foldable           (foldr')
+import           Data.Monoid             ((<>))
+import           Data.Text               (Text)
+import           TextShow                (showt)
 
 import           Network.Bing.Types
-import           Network.Wreq         (auth, basicAuth, defaults, getWith,
-                                       header, param, responseBody, Response)
-import qualified Network.Wreq         as Wreq
+import           Network.Wreq            (Response, auth, basicAuth, defaults,
+                                          getWith, header, param, responseBody)
+import qualified Network.Wreq            as Wreq
 
+-- | query bing with given 'Options' and get a 'Network.Wreq.Response'
 searchQuery :: Options -> Text -> IO (Response ByteString)
 searchQuery options str = do
-  let format      = optsFormat     options
-      accountKey  = unAccountKey $ optsKey options
-      service     = optsService    options
-      top         = optsTop        options
+  let format      = optsFormat      options
+      accountKey  = unAccountKey  $ optsKey options
+      service     = optsService     options
+      top         = optsTop         options
       compression = optsCompression options
+      queryParams = optsQueryParams options
       requestOpts =
         [ param "$format" .~ [showt format]
         , param "$top"    .~ [showt top]
@@ -38,10 +37,15 @@ searchQuery options str = do
               then [header "Accept-Encoding" .~ ["gzip"]]
               else []
         <> getHeaders service
+        <> map toOptionParam queryParams
   getWith (applyOptions requestOpts) (getUrl service)
 
+-- | query bing with given 'Options' and get a 'Network.Wreq.Response'
 searchQueryBody :: Options -> Text -> IO ByteString
 searchQueryBody opts = fmap (view responseBody) . searchQuery opts
 
 applyOptions :: [Wreq.Options -> Wreq.Options] -> Wreq.Options
 applyOptions = foldr' ($) defaults
+
+toOptionParam :: (Text, Text) -> Wreq.Options -> Wreq.Options
+toOptionParam (key, value) = param key .~ [value]
