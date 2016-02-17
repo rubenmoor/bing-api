@@ -2,15 +2,22 @@
 
 module Main where
 
-import Data.Default (def)
-import Network.Bing
+import Data.Text.IO (getLine)
+import qualified Data.ByteString.Char8 as Char8
+import qualified Data.ByteString.Lazy.Char8 as LChar8
+import           Data.Default (def)
+import           Network.Bing
+import           Options      (Options (..), getOptions)
+import Prelude hiding (getLine)
 
 main :: IO ()
 main = do
-  let accountKey = makeAccountKey "UDjp1eB2K7fUaHtR2kF3rvY0gckbZa3HbUzZlk/6PrU="
+  opts <- getOptions
+  let accountKey = makeAccountKey . Char8.pack $ optAccountKey opts
       options    = def { optsKey = accountKey
                        , optsTop = 1
                        , optsCompression = True
                        }
-  result <- searchQuery options "XBox"
-  print result
+  getLine
+    >>= searchQuery options
+    >>= LChar8.putStr
